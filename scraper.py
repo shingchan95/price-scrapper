@@ -48,7 +48,10 @@ def scrape_cex():
 
         page += 1
 
-    print(f"Inserting {len(all_data)} items into Supabase DB...")
+    print(f"Scraped {len(all_data)} GPUs. Sample data:")
+    for i, entry in enumerate(all_data[:5]):  # Print first 5
+        print(entry)
+
 
     # Insert into Supabase
     for entry in all_data:

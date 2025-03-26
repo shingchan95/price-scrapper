@@ -37,3 +37,16 @@ def get_prices():
 def run_scraper():
     scrape_cex()
     return "Scraper ran!"
+
+
+@app.route('/test-insert')
+def test_insert():
+    from db import supabase
+    response = supabase.table("gpu_prices").insert({
+        "gpu_name": "TEST GPU",
+        "sell_cash": 100.0,
+        "sell_store": 110.0,
+        "buy_price": 200.0,
+        "date_tracked": "2025-03-26"
+    }).execute()
+    return str(response)
