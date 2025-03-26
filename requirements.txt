@@ -6,3 +6,4 @@ gunicorn
 supabase
 requests-html
 lxml[html_clean]
+python-dotenv
