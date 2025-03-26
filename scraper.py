@@ -1,6 +1,6 @@
 import requests
-import datetime
 from db import supabase
+import datetime
 
 def scrape_cex():
     print("🔍 Scraping CEX using Algolia API...")
@@ -13,60 +13,65 @@ def scrape_cex():
         "Content-Type": "application/json"
     }
 
-    payload = {
-        "requests": [
-            {
-                "indexName": "prod_cex_uk",
-                "params": (
-                    'attributesToRetrieve=["boxBuyAllowed","boxName","boxSaleAllowed","boxWebBuyAllowed",'
-                    '"boxWebSaleAllowed","cannotBuy","cashPrice","categoryFriendlyName","categoryName",'
-                    '"collectionQuantity","ecomQuantity","exchangePrice","imageUrls","isNewBox","masterBoxId",'
-                    '"masterBoxName","outOfEcomStock","superCatFriendlyName","superCatName","boxId",'
-                    '"outOfStock","sellPrice","exchangePerc","cashBuyPrice","scId","discontinued","new",'
-                    '"cashPriceCalculated","exchangePriceCalculated","rating","ecomQuantityOnHand",'
-                    '"priceLastChanged","isImageTypeInternal","imageNames","Grade"]'
-                    '&clickAnalytics=true'
-                    '&facets=["*"]'
-                    '&filters=boxVisibilityOnWeb=1 AND boxSaleAllowed=1 AND categoryId:892'
-                    '&hitsPerPage=100'
-                    '&page=0'
-                    '&query='
-                    '&userToken=3d5b71cd143d45d0a95c548ab24fa6df'
-                )
-            }
-        ]
-    }
+    all_data = []
+    page = 0
 
-    try:
+    while True:
+        payload = {
+            "requests": [{
+                "indexName": "prod_cex_uk",
+                "params": f"""
+                    attributesToRetrieve=[
+                        "boxName","sellPrice","cashPrice","exchangePrice"
+                    ]
+                    &clickAnalytics=true
+                    &facets=["*"]
+                    &filters=boxVisibilityOnWeb=1 AND boxSaleAllowed=1 AND categoryId:892
+                    &hitsPerPage=30
+                    &maxValuesPerFacet=1000
+                    &page={page}
+                    &query=
+                """.replace("\n", "").replace(" ", "")
+            }]
+        }
+
         response = requests.post(url, headers=headers, json=payload)
         data = response.json()
 
         if "results" not in data or not data["results"]:
-            print(f"❌ API response missing 'results': {data}")
-            return
+            print("❌ API response missing 'results':", data)
+            break
 
         hits = data["results"][0].get("hits", [])
-        print(f"📦 Found {len(hits)} GPUs.")
+        if not hits:
+            print("✅ No more items. Done scraping.")
+            break
 
-        all_data = []
+        print(f"📄 Page {page + 1}: Found {len(hits)} items")
 
         for item in hits:
             try:
-                name = item["boxName"]
-                buy_price = float(item["sellPrice"])
-                all_data.append({
-                    "gpu_name": name,
-                    "buy_price": buy_price,
-                    "sell_cash": item.get("cashPrice"),
-                    "sell_store": item.get("exchangePrice"),
-                    "date_tracked": str(datetime.date.today())
-                })
+                name = item.get("boxName", "Unknown")
+                price = item.get("sellPrice") or item.get("cashPrice") or item.get("exchangePrice")
+
+                if name and price:
+                    all_data.append({
+                        "gpu_name": name,
+                        "sell_cash": item.get("cashPrice"),
+                        "sell_store": item.get("exchangePrice"),
+                        "buy_price": price,
+                        "date_tracked": str(datetime.date.today())
+                    })
             except Exception as e:
                 print("⚠️ Error parsing item:", e)
 
-        for entry in all_data:
-            supabase.table("gpu_prices").insert(entry).execute()
+        page += 1
 
-        print("✅ Scraping complete.")
-    except Exception as e:
-        print("❌ Scraping failed:", e)
+    print(f"📦 Scraped {len(all_data)} GPUs. Sample:")
+    for entry in all_data[:5]:
+        print(entry)
+
+    for entry in all_data:
+        supabase.table("gpu_prices").insert(entry).execute()
+
+    print("✅ Scraping complete.")
