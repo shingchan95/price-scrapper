@@ -1,66 +1,64 @@
 import requests
-from bs4 import BeautifulSoup
 from db import supabase
 import datetime
 
 def scrape_cex():
-    page = 1
-    base_url = "https://uk.webuy.com/search?categoryIds=892&categoryName=Graphics%20Cards%20-%20PCI-E"
-    all_data = []
+    print("🔍 Scraping CEX using Algolia API...")
 
+    url = "https://search.webuy.com/1/indexes/*/queries"
+    headers = {
+        "x-algolia-agent": "Algolia for JavaScript (4.24.0); Browser (lite)",
+        "x-algolia-api-key": "bf79f2b6699e60a18ae330a1248b452c",
+        "x-algolia-application-id": "LNNFEEWZVA",
+        "Content-Type": "application/json"
+    }
+
+    page = 0
+    hits = []
     while True:
-        print(f"🔍 Scraping page {page}...")
-        url = f"{base_url}&page={page}"
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            'Accept-Language': 'en-GB,en;q=0.9'
+        payload = {
+            "requests": [
+                {
+                    "indexName": "products_uk",
+                    "params": f"query=&hitsPerPage=100&page={page}&facetFilters=[[\"superCatName:COMPUTING\"],[\"categoryName:PCI-EXPRESS-GRAPHICS-CARDS\"]]"
+                }
+            ]
         }
-        response = requests.get(url, headers=headers)
-        soup = BeautifulSoup(response.text, 'html.parser')
 
-        cards = soup.select('.wrapper-box')
-        print(f"🧪 Found {len(cards)} cards on page {page}")
+        response = requests.post(url, headers=headers, json=payload)
+        data = response.json()
+        batch = data["results"][0]["hits"]
 
-        if not cards:
-            print("✅ No more items. Done scraping.")
+        print(f"📦 Page {page + 1}: {len(batch)} items")
+        if not batch:
             break
 
-        for card in cards:
-            try:
-                name_elem = card.select_one('.card-title a')
-                price_elem = card.select_one('.product-main-price')
-
-                # Debug log
-                print("🔎 Card Found:", {
-                    "name": name_elem.get_text(strip=True) if name_elem else None,
-                    "price": price_elem.get_text(strip=True) if price_elem else None
-                })
-
-                if not name_elem or not price_elem:
-                    continue
-
-                name = name_elem.get_text(strip=True)
-                price_text = price_elem.get_text(strip=True)
-                buy_price = float(price_text.replace('£', '').strip())
-
-                all_data.append({
-                    "gpu_name": name,
-                    "sell_cash": None,
-                    "sell_store": None,
-                    "buy_price": buy_price,
-                    "date_tracked": str(datetime.date.today())
-                })
-            except Exception as e:
-                print("⚠️ Error parsing card:", e)
-
+        hits.extend(batch)
         page += 1
 
-    print(f"\n📦 Scraped {len(all_data)} GPUs. Sample data:")
+    all_data = []
+    for item in hits:
+        try:
+            gpu_name = item.get("boxName")
+            buy_price = float(item.get("price", 0))
+            if not gpu_name or buy_price <= 0:
+                continue
+
+            all_data.append({
+                "gpu_name": gpu_name,
+                "buy_price": buy_price,
+                "sell_cash": None,
+                "sell_store": None,
+                "date_tracked": str(datetime.date.today())
+            })
+        except Exception as e:
+            print("⚠️ Error parsing item:", e)
+
+    print(f"✅ Scraped {len(all_data)} GPUs. Sample:")
     for entry in all_data[:5]:
         print(entry)
 
-    # Upload to Supabase
     for entry in all_data:
         supabase.table("gpu_prices").insert(entry).execute()
 
-    print("✅ Scraping complete.")
+    print("✅ Upload complete.")
