@@ -1,12 +1,11 @@
 import requests
 from bs4 import BeautifulSoup
-from db import get_db_connection
+from db import supabase  # ✅ Updated import
 import datetime
 
 def scrape_cex():
     page = 1
     base_url = "https://uk.webuy.com/search?categoryIds=892&categoryName=Graphics%20Cards%20-%20PCI-E"
-
     all_data = []
 
     while True:
@@ -17,8 +16,6 @@ def scrape_cex():
         soup = BeautifulSoup(response.text, 'html.parser')
 
         cards = soup.select('.searchRecord')
-
-        # Stop if no more items found
         if not cards:
             print("No more items. Done scraping.")
             break
@@ -26,7 +23,6 @@ def scrape_cex():
         for card in cards:
             try:
                 name = card.select_one('.desc').get_text(strip=True)
-
                 price_tags = card.select('.priceTxt')
                 buy_price = sell_cash = sell_store = None
 
@@ -40,24 +36,22 @@ def scrape_cex():
                         sell_store = float(text.replace('WeBuy for Voucher £', '').strip())
 
                 if name and buy_price is not None:
-                    all_data.append((name, sell_cash, sell_store, buy_price))
+                    all_data.append({
+                        "gpu_name": name,
+                        "sell_cash": sell_cash,
+                        "sell_store": sell_store,
+                        "buy_price": buy_price,
+                        "date_tracked": str(datetime.date.today())
+                    })
             except Exception as e:
                 print("Error parsing card:", e)
 
         page += 1
 
-    # Insert all data into DB
-    print(f"Inserting {len(all_data)} items into DB...")
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    print(f"Inserting {len(all_data)} items into Supabase DB...")
 
-    for model, sell_cash, sell_store, buy_price in all_data:
-        cursor.execute(
-            "INSERT INTO gpu_prices (gpu_name, sell_cash, sell_store, buy_price, date_tracked) VALUES (%s, %s, %s, %s, %s)",
-            (model, sell_cash, sell_store, buy_price, datetime.date.today())
-        )
+    # Insert into Supabase
+    for entry in all_data:
+        supabase.table("gpu_prices").insert(entry).execute()
 
-    conn.commit()
-    cursor.close()
-    conn.close()
     print("Scraping complete.")

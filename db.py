@@ -1,5 +1,7 @@
-import psycopg2
+from supabase import create_client
 import os
 
-def get_db_connection():
-    return psycopg2.connect(os.environ['DATABASE_URL'])
+supabase_url = os.environ['SUPABASE_URL']
+supabase_key = os.environ['SUPABASE_KEY']
+
+supabase = create_client(supabase_url, supabase_key)
