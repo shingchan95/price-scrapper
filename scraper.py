@@ -5,7 +5,7 @@ import datetime
 def scrape_cex():
     print("🔍 Scraping CEX using Algolia API...")
 
-    url = "https://search.webuy.com/1/indexes/*/queries"
+    url = "https://search.webuy.io/1/indexes/*/queries"
     headers = {
         "x-algolia-agent": "Algolia for JavaScript (4.24.0); Browser (lite)",
         "x-algolia-api-key": "bf79f2b6699e60a18ae330a1248b452c",
