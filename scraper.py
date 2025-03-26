@@ -1,9 +1,9 @@
-from requests_html import HTMLSession
-from db import supabase  # your Supabase client setup
+import requests
+from bs4 import BeautifulSoup
+from db import supabase
 import datetime
 
-def scrape_cex(upload_to_db=True):
-    session = HTMLSession()
+def scrape_cex():
     page = 1
     base_url = "https://uk.webuy.com/search?categoryIds=892&categoryName=Graphics%20Cards%20-%20PCI-E"
     all_data = []
@@ -11,23 +11,25 @@ def scrape_cex(upload_to_db=True):
     while True:
         print(f"🔍 Scraping page {page}...")
         url = f"{base_url}&page={page}"
-        response = session.get(url)
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(url, headers=headers)
+        soup = BeautifulSoup(response.text, 'html.parser')
 
-        try:
-            response.html.render(timeout=20, sleep=2)
-        except Exception as e:
-            print("❌ Error rendering page:", e)
-            break
-
-        cards = response.html.find('.wrapper-box')
+        cards = soup.select('.wrapper-box')
         if not cards:
             print("✅ No more items. Done scraping.")
             break
 
         for card in cards:
             try:
-                name = card.find('.card-title a', first=True).text
-                price_text = card.find('.product-main-price', first=True).text
+                name_elem = card.select_one('.card-title a')
+                price_elem = card.select_one('.product-main-price')
+
+                if not name_elem or not price_elem:
+                    continue
+
+                name = name_elem.get_text(strip=True)
+                price_text = price_elem.get_text(strip=True)
                 buy_price = float(price_text.replace('£', '').strip())
 
                 all_data.append({
@@ -42,18 +44,11 @@ def scrape_cex(upload_to_db=True):
 
         page += 1
 
-    print(f"\n📦 Scraped {len(all_data)} GPUs. Sample:")
+    print(f"📦 Scraped {len(all_data)} GPUs. Sample:")
     for entry in all_data[:5]:
         print(entry)
 
-    if upload_to_db:
-        print("\n⬆️ Uploading to Supabase...")
-        for entry in all_data:
-            supabase.table("gpu_prices").insert(entry).execute()
-        print("✅ Upload complete.")
+    for entry in all_data:
+        supabase.table("gpu_prices").insert(entry).execute()
 
-    print("🚀 Scraping finished.")
-
-# Only run if script is executed directly
-if __name__ == "__main__":
-    scrape_cex()
+    print("✅ Scraping complete.")
