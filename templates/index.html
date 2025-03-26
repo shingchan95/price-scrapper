@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>GPU Price Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <h1>GPU Price Tracker</h1>
+  <input type="text" id="gpuName" placeholder="Enter GPU Name..." />
+  <button onclick="loadChart()">Show Chart</button>
+  <canvas id="priceChart" width="400" height="200"></canvas>
+
+  <script>
+    async function loadChart() {
+      const gpu = document.getElementById("gpuName").value;
+      const res = await fetch(`/api/gpu-prices?gpu=${encodeURIComponent(gpu)}`);
+      const data = await res.json();
+
+      const labels = data.map(d => d.date);
+      const sell_cash = data.map(d => d.sell_cash);
+      const sell_store = data.map(d => d.sell_store);
+      const buy_price = data.map(d => d.buy_price);
+
+      new Chart(document.getElementById("priceChart"), {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            { label: "Buy Price", data: buy_price, borderWidth: 1 },
+            { label: "Sell for Cash", data: sell_cash, borderWidth: 1 },
+            { label: "Sell for Store", data: sell_store, borderWidth: 1 },
+          ]
+        }
+      });
+    }
+  </script>
+</body>
+</html>
