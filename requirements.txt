@@ -4,4 +4,5 @@ requests
 beautifulsoup4
 gunicorn
 supabase
-requests_html
+requests-html
+lxml[html_clean]

@@ -1,22 +1,27 @@
 from requests_html import HTMLSession
-from db import supabase
+from db import supabase  # your Supabase client setup
 import datetime
 
-def scrape_cex():
+def scrape_cex(upload_to_db=True):
     session = HTMLSession()
     page = 1
     base_url = "https://uk.webuy.com/search?categoryIds=892&categoryName=Graphics%20Cards%20-%20PCI-E"
     all_data = []
 
     while True:
-        print(f"Scraping page {page}...")
+        print(f"🔍 Scraping page {page}...")
         url = f"{base_url}&page={page}"
         response = session.get(url)
-        response.html.render(timeout=20)  # <- this runs JS!
+
+        try:
+            response.html.render(timeout=20, sleep=2)
+        except Exception as e:
+            print("❌ Error rendering page:", e)
+            break
 
         cards = response.html.find('.wrapper-box')
         if not cards:
-            print("No more items. Done scraping.")
+            print("✅ No more items. Done scraping.")
             break
 
         for card in cards:
@@ -33,15 +38,22 @@ def scrape_cex():
                     "date_tracked": str(datetime.date.today())
                 })
             except Exception as e:
-                print("Error parsing card:", e)
+                print("⚠️ Error parsing card:", e)
 
         page += 1
 
-    print(f"Scraped {len(all_data)} GPUs. Sample data:")
+    print(f"\n📦 Scraped {len(all_data)} GPUs. Sample:")
     for entry in all_data[:5]:
         print(entry)
 
-    for entry in all_data:
-        supabase.table("gpu_prices").insert(entry).execute()
+    if upload_to_db:
+        print("\n⬆️ Uploading to Supabase...")
+        for entry in all_data:
+            supabase.table("gpu_prices").insert(entry).execute()
+        print("✅ Upload complete.")
 
-    print("Scraping complete.")
+    print("🚀 Scraping finished.")
+
+# Only run if script is executed directly
+if __name__ == "__main__":
+    scrape_cex()
