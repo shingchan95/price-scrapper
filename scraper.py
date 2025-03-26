@@ -1,64 +1,72 @@
 import requests
-from db import supabase
 import datetime
+from db import supabase
 
 def scrape_cex():
     print("🔍 Scraping CEX using Algolia API...")
 
-    url = (
-        "https://search.webuy.io/1/indexes/*/queries"
-        "?x-algolia-agent=Algolia%20for%20JavaScript%20(4.24.0)%3B%20Browser%20(lite)"
-        "%3B%20instantsearch.js%20(4.75.6)%3B%20Vue%20(3.5.13)%3B%20Vue%20InstantSearch"
-        "%20(4.19.12)%3B%20JS%20Helper%20(3.22.6)"
-        "&x-algolia-api-key=bf79f2b6699e60a18ae330a1248b452c"
-        "&x-algolia-application-id=LNNFEEWZVA"
-    )
-
+    url = "https://search.webuy.io/1/indexes/*/queries"
     headers = {
-        "Content-Type": "application/json",
-        "Referer": "https://uk.webuy.com",
-        "Origin": "https://uk.webuy.com",
-        "User-Agent": "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Mobile Safari/537.36"
+        "x-algolia-agent": "Algolia for JavaScript (4.24.0); Browser (lite); instantsearch.js (4.75.6); Vue (3.5.13); Vue InstantSearch (4.19.12); JS Helper (3.22.6)",
+        "x-algolia-api-key": "bf79f2b6699e60a18ae330a1248b452c",
+        "x-algolia-application-id": "LNNFEEWZVA",
+        "Content-Type": "application/json"
     }
 
     payload = {
         "requests": [
             {
-                "indexName": "prod_uk_products_price_desc",
-                "params": "query=&hitsPerPage=30&page=0&facetFilters=%5B%5B%22superCatName%3ACOMPUTING%22%5D%2C%5B%22categoryName%3APCI-EXPRESS-GRAPHICS-CARDS%22%5D%5D"
+                "indexName": "prod_cex_uk",
+                "params": (
+                    'attributesToRetrieve=["boxBuyAllowed","boxName","boxSaleAllowed","boxWebBuyAllowed",'
+                    '"boxWebSaleAllowed","cannotBuy","cashPrice","categoryFriendlyName","categoryName",'
+                    '"collectionQuantity","ecomQuantity","exchangePrice","imageUrls","isNewBox","masterBoxId",'
+                    '"masterBoxName","outOfEcomStock","superCatFriendlyName","superCatName","boxId",'
+                    '"outOfStock","sellPrice","exchangePerc","cashBuyPrice","scId","discontinued","new",'
+                    '"cashPriceCalculated","exchangePriceCalculated","rating","ecomQuantityOnHand",'
+                    '"priceLastChanged","isImageTypeInternal","imageNames","Grade"]'
+                    '&clickAnalytics=true'
+                    '&facets=["*"]'
+                    '&filters=boxVisibilityOnWeb=1 AND boxSaleAllowed=1 AND categoryId:892'
+                    '&hitsPerPage=100'
+                    '&page=0'
+                    '&query='
+                    '&userToken=3d5b71cd143d45d0a95c548ab24fa6df'
+                )
             }
         ]
     }
 
-    response = requests.post(url, headers=headers, json=payload)
-    data = response.json()
+    try:
+        response = requests.post(url, headers=headers, json=payload)
+        data = response.json()
 
-    if "results" not in data:
-        print("❌ API response missing 'results':", data)
-        return
+        if "results" not in data or not data["results"]:
+            print(f"❌ API response missing 'results': {data}")
+            return
 
-    batch = data["results"][0]["hits"]
-    all_data = []
+        hits = data["results"][0].get("hits", [])
+        print(f"📦 Found {len(hits)} GPUs.")
 
-    for item in batch:
-        try:
-            name = item.get("boxTitle") or item.get("title")
-            buy_price = float(item["price"]["value"])
-            all_data.append({
-                "gpu_name": name,
-                "sell_cash": None,
-                "sell_store": None,
-                "buy_price": buy_price,
-                "date_tracked": str(datetime.date.today())
-            })
-        except Exception as e:
-            print("⚠️ Error parsing item:", e)
+        all_data = []
 
-    print(f"📦 Scraped {len(all_data)} GPUs. Sample:")
-    for entry in all_data[:5]:
-        print(entry)
+        for item in hits:
+            try:
+                name = item["boxName"]
+                buy_price = float(item["sellPrice"])
+                all_data.append({
+                    "gpu_name": name,
+                    "buy_price": buy_price,
+                    "sell_cash": item.get("cashPrice"),
+                    "sell_store": item.get("exchangePrice"),
+                    "date_tracked": str(datetime.date.today())
+                })
+            except Exception as e:
+                print("⚠️ Error parsing item:", e)
 
-    for entry in all_data:
-        supabase.table("gpu_prices").insert(entry).execute()
+        for entry in all_data:
+            supabase.table("gpu_prices").insert(entry).execute()
 
-    print("✅ Scraping complete.")
+        print("✅ Scraping complete.")
+    except Exception as e:
+        print("❌ Scraping failed:", e)
