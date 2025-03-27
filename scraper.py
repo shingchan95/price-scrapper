@@ -66,7 +66,7 @@ def scrape_cex():
             except Exception as e:
                 print("⚠️ Error parsing item:", e)
 
-        break  # Stop after first page (1000 results max)
+        page += 1
 
     print(f"📦 Scraped {len(all_data)} GPUs. Sample:")
     for entry in all_data[:5]:
