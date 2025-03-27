@@ -14,69 +14,71 @@ def scrape_cex():
     }
 
     all_data = []
-    page = 0
     today = str(datetime.date.today())
 
-    while True:
-        payload = {
-            "requests": [{
-                "indexName": "prod_cex_uk",
-                "params": (
-                    "attributesToRetrieve=boxName,sellPrice,cashPrice,exchangePrice&"
-                    "clickAnalytics=true&"
-                    "facets=%5B%22*%22%5D&"
-                    "filters=boxVisibilityOnWeb=1 AND boxSaleAllowed=1 AND categoryId:892&"
-                    "hitsPerPage=1000&"  # Maximize per page
-                    f"page={page}&"
-                    "query="
-                )
-            }]
-        }
+    payload = {
+        "requests": [{
+            "indexName": "prod_cex_uk",
+            "params": (
+                "attributesToRetrieve=boxName,sellPrice,cashPrice,exchangePrice&"
+                "clickAnalytics=true&"
+                "facets=%5B%22*%22%5D&"
+                "filters=boxVisibilityOnWeb=1 AND boxSaleAllowed=1 AND categoryId:892&"
+                "hitsPerPage=1000&"
+                "maxValuesPerFacet=1000&"
+                "page=0&"
+                "query="
+            )
+        }]
+    }
 
-        response = requests.post(url, headers=headers, json=payload)
-        data = response.json()
+    response = requests.post(url, headers=headers, json=payload)
+    data = response.json()
 
-        if "results" not in data or not data["results"]:
-            print("❌ API response missing 'results':", data)
-            break
+    if "results" not in data or not data["results"]:
+        print("❌ API response missing 'results':", data)
+        return
 
-        hits = data["results"][0].get("hits", [])
-        if not hits:
-            print("✅ No more items. Done scraping.")
-            break
+    hits = data["results"][0].get("hits", [])
+    if not hits:
+        print("✅ No items found. Done scraping.")
+        return
 
-        print(f"📄 Page {page + 1}: Found {len(hits)} items")
+    print(f"📄 API returned {len(hits)} items")
 
-        for item in hits:
-            try:
-                name = item.get("boxName", "Unknown")
-                price = item.get("sellPrice") or item.get("cashPrice") or item.get("exchangePrice")
+    inserted = 0
+    duplicates = 0
+    missing_price = 0
 
-                if name and price:
-                    entry = {
-                        "gpu_name": name,
-                        "sell_cash": item.get("cashPrice"),
-                        "sell_store": item.get("exchangePrice"),
-                        "buy_price": price,
-                        "date_tracked": today
-                    }
-                    all_data.append(entry)
-            except Exception as e:
-                print("⚠️ Error parsing item:", e)
-
-        # Uncomment if you want full pagination
-        # page += 1
-        break  # We stop after first page (1000 results max)
-
-    print(f"📦 Scraped {len(all_data)} GPUs. Sample:")
-    for entry in all_data[:5]:
-        print(entry)
-
-    if all_data:
+    for item in hits:
         try:
-            supabase.table("gpu_prices").insert(all_data).execute()
-            print(f"✅ Inserted {len(all_data)} entries")
-        except Exception as e:
-            print(f"⏩ Some entries may be duplicates or failed: {e}")
+            name = item.get("boxName", "Unknown")
+            price = item.get("sellPrice") or item.get("cashPrice") or item.get("exchangePrice")
 
+            if not price:
+                missing_price += 1
+                continue
+
+            entry = {
+                "gpu_name": name,
+                "sell_cash": item.get("cashPrice"),
+                "sell_store": item.get("exchangePrice"),
+                "buy_price": price,
+                "date_tracked": today
+            }
+
+            try:
+                supabase.table("gpu_prices").insert(entry).execute()
+                inserted += 1
+            except Exception as e:
+                duplicates += 1
+        except Exception as e:
+            print("⚠️ Error parsing item:", e)
+
+    # Summary
+    print("📦 Scraping Summary:")
+    print(f"• Total from API     : {len(hits)}")
+    print(f"• Inserted to DB     : {inserted}")
+    print(f"• Duplicates skipped : {duplicates}")
+    print(f"• Missing price      : {missing_price}")
     print("✅ Scraping complete.")
