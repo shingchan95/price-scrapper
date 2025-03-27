@@ -1,9 +1,14 @@
 from flask import Flask, jsonify, render_template, request
 from db import supabase
 from scraper import scrape_cex
+import os
 
-app = Flask(__name__, static_folder='static', static_url_path='/static')
-
+app = Flask(
+    __name__,
+    template_folder=os.path.join(os.path.dirname(__file__), '..', 'templates'),
+    static_folder=os.path.join(os.path.dirname(__file__), '..', 'static'),
+    static_url_path='/static'
+)
 @app.route('/')
 def index():
     return render_template("index.html")
