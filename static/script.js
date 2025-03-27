@@ -1,95 +1,112 @@
-const searchBar = document.getElementById("search-bar");
+// script.js
+let allGpus = [];
+let chart = null;
 
-searchBar.addEventListener("input", () => {
-  const query = searchBar.value.toLowerCase();
-  const options = dropdown.querySelectorAll("option");
-  options.forEach(opt => {
-    const match = opt.textContent.toLowerCase().includes(query);
-    opt.hidden = !match;
-  });
-});
+const searchInput = document.getElementById("search-bar");
+const gpuContainer = document.getElementById("gpu-cards");
+const detailsSection = document.getElementById("gpu-details");
+const nameSpan = document.getElementById("gpu-name");
+const buySpan = document.getElementById("gpu-buy-price");
+const cashSpan = document.getElementById("gpu-sell-cash");
+const storeSpan = document.getElementById("gpu-sell-store");
+const profitSpan = document.getElementById("gpu-profit");
+const totalGpuSpan = document.getElementById("total-gpus");
 
-
-const dropdown = document.getElementById("gpu-dropdown");
-
-let chart;
-
-async function loadGpuOptions() {
-  const res = await fetch("/api/gpu-list");
-  const gpus = await res.json();
-
-  dropdown.innerHTML = '';
-  gpus.forEach(gpu => {
-    const option = document.createElement("option");
-    option.value = gpu;
-    option.textContent = gpu;
-    dropdown.appendChild(option);
-  });
-
-  if (gpus.length > 0) {
-    dropdown.value = gpus[0];
-    loadChart(); // Load first GPU by default
+async function fetchGpuList() {
+  try {
+    const res = await fetch("/api/gpu-list");
+    const gpus = await res.json();
+    allGpus = gpus;
+    totalGpuSpan.textContent = gpus.length;
+    displayGpuCards(gpus);
+  } catch (err) {
+    console.error("Failed to load GPUs", err);
   }
 }
 
-async function loadChart() {
-  const gpu = dropdown.value;
-  if (!gpu) return;
+function displayGpuCards(gpus) {
+  gpuContainer.innerHTML = "";
+  gpus.forEach((gpu) => {
+    const card = document.createElement("div");
+    card.className =
+      "bg-white p-4 rounded shadow cursor-pointer hover:bg-gray-50 transition";
+    card.textContent = gpu;
+    card.onclick = () => loadGpuDetails(gpu);
+    gpuContainer.appendChild(card);
+  });
+}
 
-  const res = await fetch(`/api/gpu-prices?gpu=${encodeURIComponent(gpu)}`);
-  const data = await res.json();
+searchInput.addEventListener("input", (e) => {
+  const searchTerm = e.target.value.toLowerCase();
+  const filtered = allGpus.filter((g) => g.toLowerCase().includes(searchTerm));
+  displayGpuCards(filtered);
+});
 
-  const labels = data.map(d => d.date);
-  const buy = data.map(d => d.buy_price);
-  const cash = data.map(d => d.sell_cash);
-  const store = data.map(d => d.sell_store);
+async function loadGpuDetails(gpu) {
+  try {
+    const res = await fetch(`/api/gpu-prices?gpu=${encodeURIComponent(gpu)}`);
+    const data = await res.json();
+    if (!data.length) return;
 
+    const latest = data[data.length - 1];
+    nameSpan.textContent = gpu;
+    buySpan.textContent = latest.buy_price;
+    cashSpan.textContent = latest.sell_cash ?? "-";
+    storeSpan.textContent = latest.sell_store ?? "-";
+
+    const diff = (latest.buy_price - Math.max(latest.sell_cash || 0, latest.sell_store || 0)).toFixed(2);
+    profitSpan.textContent = diff;
+
+    renderChart(data);
+    detailsSection.classList.remove("hidden");
+  } catch (err) {
+    console.error("Failed to load details", err);
+  }
+}
+
+function renderChart(data) {
   const ctx = document.getElementById("priceChart").getContext("2d");
+  const labels = data.map((d) => d.date);
+  const buy = data.map((d) => d.buy_price);
+  const cash = data.map((d) => d.sell_cash);
+  const store = data.map((d) => d.sell_store);
 
-  if (chart) chart.destroy(); // Clear old chart
+  if (chart) chart.destroy();
 
   chart = new Chart(ctx, {
-    type: 'line',
+    type: "line",
     data: {
-      labels: labels,
+      labels,
       datasets: [
-        { label: "Buy Price", data: buy, borderWidth: 2, borderColor: '#3e95cd', fill: false },
-        { label: "Sell for Cash", data: cash, borderWidth: 2, borderColor: '#8e5ea2', fill: false },
-        { label: "Sell for Store Credit", data: store, borderWidth: 2, borderColor: '#3cba9f', fill: false }
-      ]
+        {
+          label: "Buy Price",
+          data: buy,
+          borderColor: "#3b82f6",
+          borderWidth: 2,
+        },
+        {
+          label: "Cash Price",
+          data: cash,
+          borderColor: "#f59e0b",
+          borderWidth: 2,
+        },
+        {
+          label: "Store Credit",
+          data: store,
+          borderColor: "#10b981",
+          borderWidth: 2,
+        },
+      ],
     },
     options: {
       responsive: true,
-      maintainAspectRatio: false
-    }
+      plugins: {
+        legend: {
+          position: "top",
+        },
+      },
+    },
   });
 }
 
-dropdown.addEventListener("change", loadChart);
-loadGpuOptions();
-
-
-async function loadOverviewStats() {
-    const res = await fetch("/api/gpu-list");
-    const gpus = await res.json();
-  
-    // Update total
-    document.getElementById("total-gpus").textContent = gpus.length;
-  
-    // For simplicity, we'll just use the first GPU's trend to mock avg/drop/gain.
-    if (gpus.length > 0) {
-      const priceRes = await fetch(`/api/gpu-prices?gpu=${encodeURIComponent(gpus[0])}`);
-      const data = await priceRes.json();
-  
-      if (data.length > 0) {
-        const prices = data.map(p => p.buy_price);
-        const avg = prices.reduce((a, b) => a + b, 0) / prices.length;
-        const diff = prices[prices.length - 1] - prices[0];
-  
-        document.getElementById("avg-price").textContent = `£${avg.toFixed(2)}`;
-        document.getElementById("biggest-drop").textContent = diff < 0 ? `£${diff}` : 'None';
-        document.getElementById("top-gainer").textContent = diff > 0 ? `£${diff}` : 'None';
-      }
-    }
-  }
-  loadOverviewStats();
+window.onload = fetchGpuList;
