@@ -15,23 +15,22 @@ def scrape_cex():
 
     all_data = []
     page = 0
+    today = str(datetime.date.today())
 
     while True:
         payload = {
             "requests": [{
                 "indexName": "prod_cex_uk",
-                "params": f"""
-                    attributesToRetrieve=[
-                        "boxName","sellPrice","cashPrice","exchangePrice"
-                    ]
-                    &clickAnalytics=true
-                    &facets=["*"]
-                    &filters": "boxVisibilityOnWeb=1 AND boxSaleAllowed=1 AND categoryId=892
-                    &hitsPerPage=30
-                    &maxValuesPerFacet=1000
-                    &page={page}
-                    &query=
-                """.replace("\n", "").replace(" ", "")
+                "params": (
+                    "attributesToRetrieve=boxName,sellPrice,cashPrice,exchangePrice&"
+                    "clickAnalytics=true&"
+                    "facets=%5B%22*%22%5D&"
+                    "filters=boxVisibilityOnWeb=1 AND boxSaleAllowed=1 AND categoryId:892&"
+                    "hitsPerPage=30&"
+                    "maxValuesPerFacet=1000&"
+                    f"page={page}&"
+                    "query="
+                )
             }]
         }
 
@@ -55,13 +54,21 @@ def scrape_cex():
                 price = item.get("sellPrice") or item.get("cashPrice") or item.get("exchangePrice")
 
                 if name and price:
-                    all_data.append({
+                    entry = {
                         "gpu_name": name,
                         "sell_cash": item.get("cashPrice"),
                         "sell_store": item.get("exchangePrice"),
                         "buy_price": price,
-                        "date_tracked": str(datetime.date.today())
-                    })
+                        "date_tracked": today
+                    }
+                    all_data.append(entry)
+
+                    # Insert with duplicate prevention
+                    try:
+                        supabase.table("gpu_prices").insert(entry).execute()
+                        print(f"✅ Inserted {entry['gpu_name']}")
+                    except Exception as e:
+                        print(f"⏩ Skipped {entry['gpu_name']} (likely duplicate): {e}")
             except Exception as e:
                 print("⚠️ Error parsing item:", e)
 
