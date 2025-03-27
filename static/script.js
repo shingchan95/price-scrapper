@@ -11,6 +11,10 @@ const storeSpan = document.getElementById("gpu-sell-store");
 const profitSpan = document.getElementById("gpu-profit");
 const totalGpuSpan = document.getElementById("total-gpus");
 
+const searchSection = document.getElementById("search-section");
+const overviewSection = document.getElementById("overview");
+const backButton = document.getElementById("back-button");
+
 async function fetchGpuList() {
   try {
     const res = await fetch("/api/gpu-list");
@@ -19,7 +23,7 @@ async function fetchGpuList() {
     totalGpuSpan.textContent = gpus.length;
     displayGpuCards(gpus);
   } catch (err) {
-    console.error("❌ Failed to load GPUs:", err);
+    console.error("Failed to load GPUs", err);
   }
 }
 
@@ -53,13 +57,20 @@ async function loadGpuDetails(gpu) {
     cashSpan.textContent = latest.sell_cash ?? "-";
     storeSpan.textContent = latest.sell_store ?? "-";
 
-    const diff = (latest.buy_price - Math.max(latest.sell_cash || 0, latest.sell_store || 0)).toFixed(2);
+    const diff = (
+      latest.buy_price -
+      Math.max(latest.sell_cash || 0, latest.sell_store || 0)
+    ).toFixed(2);
     profitSpan.textContent = diff;
 
     renderChart(data);
+
+    // Hide overview and search, show details
+    overviewSection.classList.add("hidden");
+    searchSection.classList.add("hidden");
     detailsSection.classList.remove("hidden");
   } catch (err) {
-    console.error("❌ Failed to load GPU details:", err);
+    console.error("Failed to load details", err);
   }
 }
 
@@ -82,31 +93,36 @@ function renderChart(data) {
           data: buy,
           borderColor: "#3b82f6",
           borderWidth: 2,
-          fill: false
         },
         {
           label: "Cash Price",
           data: cash,
           borderColor: "#f59e0b",
           borderWidth: 2,
-          fill: false
         },
         {
           label: "Store Credit",
           data: store,
           borderColor: "#10b981",
           borderWidth: 2,
-          fill: false
         },
       ],
     },
     options: {
       responsive: true,
       plugins: {
-        legend: { position: "top" }
+        legend: {
+          position: "top",
+        },
       },
     },
   });
 }
+
+backButton.addEventListener("click", () => {
+  detailsSection.classList.add("hidden");
+  overviewSection.classList.remove("hidden");
+  searchSection.classList.remove("hidden");
+});
 
 window.onload = fetchGpuList;
