@@ -2,9 +2,13 @@ services:
   - type: web
     name: price-scrapper
     env: python
-    buildCommand: pip install -r backend/requirements.txt
-    startCommand: python backend/app.py
+    region: frankfurt
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py
     build:
-      # Tell Render to use `backend` as the working directory
       cwd: backend
-    autoDeploy: true
+    source:
+      repo: https://github.com/shingchan95/price-scrapper
+      branch: main
+      autoDeploy: true
