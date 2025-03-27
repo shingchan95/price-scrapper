@@ -1,10 +1,10 @@
 services:
   - type: web
-    name: gpu-scraper-backend
+    name: price-scrapper
     env: python
-    rootDir: backend
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.11
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: python backend/app.py
+    build:
+      # Tell Render to use `backend` as the working directory
+      cwd: backend
+    autoDeploy: true
