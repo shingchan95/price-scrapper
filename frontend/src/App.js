@@ -1,25 +1,57 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useEffect, useState } from "react";
+import Overview from "./components/Overview";
+import GpuSearch from "./components/GpuSearch";
+import GpuDetails from "./components/GpuDetails";
+import DarkModeToggle from "./components/DarkModeToggle";
 
-function App() {
+export default function App() {
+  const [gpus, setGpus] = useState([]);
+  const [selectedGpu, setSelectedGpu] = useState(null);
+  const [search, setSearch] = useState("");         
+  const [sortOption, setSortOption] = useState("name"); 
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    fetch("/api/gpu-list")
+      .then((res) => res.json())
+      .then((data) => setGpus(data));
+  }, []);
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
+    <main className="max-w-6xl mx-auto p-4 bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 min-h-screen transition-colors">
+      <header className="bg-white dark:bg-gray-800 shadow p-4 mb-4 transition-colors">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 text-center w-full sm:w-auto">
+          GPU Price Tracker
+        </h1>
+        <div className="sm:ml-auto mt-2 sm:mt-0">
+          <DarkModeToggle />
+        </div>
+      </div>
       </header>
-    </div>
+
+      {!selectedGpu && (
+        <>
+          <Overview total={gpus.length} />
+          <GpuSearch
+            gpus={gpus}
+            onSelect={setSelectedGpu}
+            search={search}
+            setSearch={setSearch}
+            sortOption={sortOption}
+            setSortOption={setSortOption}
+            currentPage={currentPage}           
+            setCurrentPage={setCurrentPage}
+          />
+        </>
+      )}
+
+      {selectedGpu && (
+        <GpuDetails
+          gpu={selectedGpu}
+          onBack={() => setSelectedGpu(null)}
+        />
+      )}
+    </main>
   );
 }
-
-export default App;
