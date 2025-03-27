@@ -1,4 +1,5 @@
-const dropdown = document.getElementById("gpuDropdown");
+const dropdown = document.getElementById("gpu-dropdown");
+
 let chart;
 
 async function loadGpuOptions() {
