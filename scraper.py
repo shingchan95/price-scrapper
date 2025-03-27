@@ -22,7 +22,7 @@ def scrape_cex():
             "requests": [{
                 "indexName": "prod_cex_uk",
                 "params": (
-                    "attributesToRetrieve=boxName,sellPrice,cashPrice,exchangePrice&"
+                    "attributesToRetrieve=cashPriceCalculated,exchangePriceCalculated,boxName,sellPrice&"
                     "clickAnalytics=true&"
                     "facets=%5B%22*%22%5D&"
                     "filters=boxVisibilityOnWeb=1 AND boxSaleAllowed=1 AND categoryId:892&"
@@ -70,7 +70,7 @@ def scrape_cex():
 
     print(f"📦 Scraped {len(all_data)} GPUs. Sample:")
     for entry in all_data[:5]:
-        print(entry)
+        print(f"🧾 {entry['gpu_name']}: sell_cash={entry['sell_cash']}, sell_store={entry['sell_store']}, buy_price={entry['buy_price']}")
 
     if all_data:
         try:
