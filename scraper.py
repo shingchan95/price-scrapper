@@ -71,7 +71,10 @@ def scrape_cex():
     for entry in all_data[:5]:
         print(entry)
 
-    for entry in all_data:
+    try:
         supabase.table("gpu_prices").insert(entry).execute()
+        print(f"✅ Inserted {entry['gpu_name']}")
+    except Exception as e:
+        print(f"⏩ Skipped {entry['gpu_name']} (likely duplicate):", str(e))
 
     print("✅ Scraping complete.")
