@@ -26,7 +26,7 @@ def scrape_cex():
                     ]
                     &clickAnalytics=true
                     &facets=["*"]
-                    &filters=boxVisibilityOnWeb=1 AND boxSaleAllowed=1 AND categoryId:892
+                    &filters": "boxVisibilityOnWeb=1 AND boxSaleAllowed=1 AND categoryId=892
                     &hitsPerPage=30
                     &maxValuesPerFacet=1000
                     &page={page}
