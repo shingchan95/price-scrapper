@@ -50,23 +50,23 @@ def scrape_cex():
         for item in hits:
             try:
                 name = item.get("boxName", "Unknown")
-                price = item.get("sellPrice") or item.get("cashPrice") or item.get("exchangePrice")
+                sell_cash = item.get("cashPriceCalculated")
+                sell_store = item.get("exchangePriceCalculated")
+                buy_price = item.get("sellPrice") or sell_cash or sell_store
 
-                if name and price:
+                if name and buy_price:
                     entry = {
                         "gpu_name": name,
-                        "sell_cash": item.get("cashPrice"),
-                        "sell_store": item.get("exchangePrice"),
-                        "buy_price": price,
+                        "sell_cash": sell_cash,
+                        "sell_store": sell_store,
+                        "buy_price": buy_price,
                         "date_tracked": today
                     }
                     all_data.append(entry)
             except Exception as e:
                 print("⚠️ Error parsing item:", e)
 
-        # Uncomment if you want full pagination
-        # page += 1
-        break  # We stop after first page (1000 results max)
+        break  # Stop after first page (1000 results max)
 
     print(f"📦 Scraped {len(all_data)} GPUs. Sample:")
     for entry in all_data[:5]:
