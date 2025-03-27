@@ -1,4 +1,3 @@
-// script.js
 let allGpus = [];
 let chart = null;
 
@@ -20,7 +19,7 @@ async function fetchGpuList() {
     totalGpuSpan.textContent = gpus.length;
     displayGpuCards(gpus);
   } catch (err) {
-    console.error("Failed to load GPUs", err);
+    console.error("❌ Failed to load GPUs:", err);
   }
 }
 
@@ -60,7 +59,7 @@ async function loadGpuDetails(gpu) {
     renderChart(data);
     detailsSection.classList.remove("hidden");
   } catch (err) {
-    console.error("Failed to load details", err);
+    console.error("❌ Failed to load GPU details:", err);
   }
 }
 
@@ -83,27 +82,28 @@ function renderChart(data) {
           data: buy,
           borderColor: "#3b82f6",
           borderWidth: 2,
+          fill: false
         },
         {
           label: "Cash Price",
           data: cash,
           borderColor: "#f59e0b",
           borderWidth: 2,
+          fill: false
         },
         {
           label: "Store Credit",
           data: store,
           borderColor: "#10b981",
           borderWidth: 2,
+          fill: false
         },
       ],
     },
     options: {
       responsive: true,
       plugins: {
-        legend: {
-          position: "top",
-        },
+        legend: { position: "top" }
       },
     },
   });
