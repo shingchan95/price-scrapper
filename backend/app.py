@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request
-from flask_cors import CORS  # 🔥 Add this
+from flask_cors import CORS
 from db import supabase
 from scraper import scrape_cex
 import os
