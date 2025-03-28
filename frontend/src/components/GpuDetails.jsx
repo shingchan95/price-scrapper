@@ -13,13 +13,14 @@ import {
 ChartJS.register(LineElement, CategoryScale, LinearScale, PointElement, Legend, Tooltip);
 
 export default function GpuDetails({ gpu, onBack }) {
+  const BASE_URL = process.env.REACT_APP_API_BASE_URL;
   const [data, setData] = useState([]);
   const [isDarkMode, setIsDarkMode] = useState(
     document.documentElement.classList.contains("dark")
   );
 
   useEffect(() => {
-    fetch(`/api/gpu-prices?gpu=${encodeURIComponent(gpu)}`)
+    fetch(`${BASE_URL}/api/gpu-prices?gpu=${encodeURIComponent(gpu)}`)
       .then((res) => res.json())
       .then(setData);
   }, [gpu]);
