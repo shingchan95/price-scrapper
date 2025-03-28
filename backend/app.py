@@ -1,8 +1,11 @@
 from flask import Flask, jsonify, request
+from flask_cors import CORS  # 🔥 Add this
 from db import supabase
 from scraper import scrape_cex
+import os
 
 app = Flask(__name__) 
+CORS(app, origins=["http://localhost:3000"])
 
 @app.route('/api/gpu-list')
 def get_gpu_list():
