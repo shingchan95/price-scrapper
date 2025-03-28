@@ -9,9 +9,38 @@ CORS(app, origins=["http://localhost:3000"])
 
 @app.route('/api/gpu-list')
 def get_gpu_list():
-    response = supabase.table("gpu_prices").select("gpu_name").execute()
-    names = {entry['gpu_name'] for entry in response.data}
-    return jsonify(sorted(list(names)))
+    response = supabase.table("gpu_prices")\
+        .select("gpu_name, buy_price, sell_cash, sell_store, date_tracked")\
+        .order("date_tracked", desc=False)\
+        .execute()
+
+    rows = response.data
+    df = pd.DataFrame(rows)
+
+    if df.empty:
+        return jsonify([])
+
+    df = df.sort_values("date_tracked")
+
+    price_summary = (
+        df.groupby("gpu_name")
+          .agg(
+              first_price=("buy_price", "first"),
+              last_price=("buy_price", "last"),
+              last_buy_price=("buy_price", "last"),
+              sell_cash=("sell_cash", "last"),
+              sell_store=("sell_store", "last"),
+          )
+          .reset_index()
+    )
+
+    price_summary["change"] = price_summary["last_price"] - price_summary["first_price"]
+
+    # ✅ Convert NaN to None for safe JSON output
+    price_summary = price_summary.replace({np.nan: None})
+
+    return jsonify(price_summary.to_dict(orient="records"))
+
 
 @app.route('/api/gpu-prices')
 def get_prices():
