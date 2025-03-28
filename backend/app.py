@@ -1,17 +1,8 @@
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, request
 from db import supabase
 from scraper import scrape_cex
-import os
 
-app = Flask(
-    __name__,
-    template_folder=os.path.join(os.path.dirname(__file__), '..', 'templates'),
-    static_folder=os.path.join(os.path.dirname(__file__), '..', 'static'),
-    static_url_path='/static'
-)
-@app.route('/')
-def index():
-    return render_template("index.html")
+app = Flask(__name__) 
 
 @app.route('/api/gpu-list')
 def get_gpu_list():
@@ -43,10 +34,8 @@ def run_scraper():
     scrape_cex()
     return "Scraper ran!"
 
-
 @app.route('/test-insert')
 def test_insert():
-    from db import supabase
     response = supabase.table("gpu_prices").insert({
         "gpu_name": "TEST GPU",
         "sell_cash": 100.0,
@@ -55,3 +44,6 @@ def test_insert():
         "date_tracked": "2025-03-26"
     }).execute()
     return str(response)
+
+if __name__ == "__main__":
+    app.run(debug=True)

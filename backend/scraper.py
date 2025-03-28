@@ -1,16 +1,17 @@
 import requests
 from db import supabase
 import datetime
+import os
 
 def scrape_cex():
-    print("🔍 Scraping CEX using Algolia API...")
+    print("🔍 Scraping ...")
 
-    url = "https://search.webuy.io/1/indexes/*/queries"
+    url = os.environ.get("API_URL")
     headers = {
-        "x-algolia-agent": "Algolia for JavaScript (4.24.0); Browser (lite); instantsearch.js (4.75.6); Vue (3.5.13); Vue InstantSearch (4.19.12); JS Helper (3.22.6)",
-        "x-algolia-api-key": "bf79f2b6699e60a18ae330a1248b452c",
-        "x-algolia-application-id": "LNNFEEWZVA",
-        "Content-Type": "application/json"
+        os.environ.get("HEADER_1_KEY"): os.environ.get("HEADER_1_VALUE"),
+        os.environ.get("HEADER_2_KEY"): os.environ.get("HEADER_2_VALUE"),
+        os.environ.get("HEADER_3_KEY"): os.environ.get("HEADER_3_VALUE"),
+        os.environ.get("HEADER_4_KEY"): os.environ.get("HEADER_4_VALUE")
     }
 
     all_data = []
