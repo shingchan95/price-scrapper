@@ -13,4 +13,4 @@ supabase
 pyppeteer
 requests
 flask_cors
-panda
+pandas
