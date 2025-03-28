@@ -3,7 +3,8 @@ from flask_cors import CORS
 from db import supabase
 from scraper import scrape_cex
 import os
-import pandas as pd 
+import pandas as pd
+import numpy as np
 
 app = Flask(__name__) 
 CORS(app, origins=["http://localhost:3000"])
