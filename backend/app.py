@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 
 app = Flask(__name__) 
-CORS(app, origins=["http://localhost:3000"])
+CORS(app, origins=["https://price-scrapper-frontend.onrender.com/"])
 
 @app.route('/api/gpu-list')
 def get_gpu_list():
